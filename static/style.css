@@ -1,0 +1,539 @@
+/* -------------------------------------------------------------
+   CERES AI - ESTILO DASHBOARD PREMIUM
+   ------------------------------------------------------------- */
+
+/* Variáveis de Cores e Temas */
+:root {
+    --bg-primary: #080c14;
+    --bg-card: rgba(16, 23, 41, 0.75);
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-hover: rgba(99, 102, 241, 0.3);
+    
+    --color-text-main: #f3f4f6;
+    --color-text-muted: #9ca3af;
+    
+    --primary: #6366f1; /* Indigo */
+    --primary-glow: rgba(99, 102, 241, 0.35);
+    
+    --healthy: #10b981; /* Emerald Green */
+    --healthy-glow: rgba(16, 185, 129, 0.15);
+    
+    --damaged: #f43f5e; /* Rose Red */
+    --damaged-glow: rgba(244, 63, 94, 0.2);
+    
+    --total: #06b6d4; /* Cyan */
+    --total-glow: rgba(6, 182, 212, 0.15);
+    
+    --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Reset Geral */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-primary);
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 45%);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    line-height: 1.5;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    flex: 1;
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--primary), var(--total));
+    border-radius: 8px;
+    box-shadow: 0 0 15px var(--primary-glow);
+    position: relative;
+}
+
+.logo-icon::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 16px;
+    height: 16px;
+    background: #000;
+    border-radius: 6px;
+}
+
+.logo-area h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.logo-area h1 span {
+    background: linear-gradient(135deg, var(--primary), var(--total));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--healthy);
+    box-shadow: 0 0 8px var(--healthy);
+    animation: pulse-dot 2s infinite;
+}
+
+/* Layout Principal Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Cartões (Cards) Glassmorphism */
+.card {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    letter-spacing: -0.2px;
+}
+
+/* Transmissão de Vídeo */
+.video-card {
+    grid-column: 1 / 2;
+}
+
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #030712;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.video-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.recording-badge {
+    display: none; /* Ativado via JS */
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    color: #fda4af;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.rec-dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--damaged);
+    border-radius: 50%;
+    animation: blink 1s infinite alternate;
+}
+
+/* Indicador da Válvula de Ar sobre o vídeo */
+.valve-indicator-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(244, 63, 94, 0.9);
+    border: 1px solid #fda4af;
+    color: #fff;
+    padding: 0.6rem 1.5rem;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.8);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 10;
+}
+
+.valve-indicator-overlay.active {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.video-controls {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Botões */
+.btn {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #4f46e5;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-main);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-danger {
+    background: rgba(244, 63, 94, 0.1);
+    border-color: rgba(244, 63, 94, 0.2);
+    color: #fda4af;
+}
+
+.btn-danger:hover {
+    background: var(--damaged);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
+}
+
+/* Métrica e Cartões de Contagem */
+.metrics-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.counters-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.counter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.counter-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+}
+
+.counter-card h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
+.counter-card .value {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.counter-card .subtext {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+/* Customização dos Cards de Contagem */
+.counter-card.healthy::before { background-color: var(--healthy); }
+.counter-card.healthy .value { color: var(--healthy); }
+.counter-card.healthy { box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.05); }
+
+.counter-card.damaged::before { background-color: var(--damaged); }
+.counter-card.damaged .value { color: var(--damaged); }
+.counter-card.damaged { box-shadow: inset 0 0 15px rgba(244, 63, 94, 0.05); }
+
+.counter-card.total::before { background-color: var(--total); }
+.counter-card.total .value { color: var(--total); }
+.counter-card.total { box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.05); }
+
+/* Painel de Estado da Válvula / Config */
+.status-panel-card {
+    padding: 1.25rem;
+}
+
+.state-row {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.state-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.state-col .label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.valve-status-light {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.6rem;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    transition: all 0.15s ease;
+}
+
+.valve-status-light.active {
+    background: rgba(244, 63, 94, 0.2);
+    border-color: var(--damaged);
+    color: #fca5a5;
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
+    animation: flash-red 0.1s alternate infinite;
+}
+
+.dropdown {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-text-main);
+    padding: 0.6rem;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.dropdown:focus {
+    border-color: var(--primary);
+}
+
+.control-actions {
+    margin-top: 0.5rem;
+}
+
+/* Gráfico */
+.chart-card {
+    flex: 1;
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 180px;
+}
+
+/* Seção de Histórico / Tabela */
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.85rem;
+}
+
+.data-table th, .data-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.data-table th {
+    background: rgba(255, 255, 255, 0.02);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.badge-status {
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+
+.badge-status.healthy {
+    background: rgba(16, 185, 129, 0.15);
+    color: #a7f3d0;
+}
+
+.badge-status.damaged {
+    background: rgba(244, 63, 94, 0.15);
+    color: #fecdd3;
+}
+
+.badge-action {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: 2rem !important;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Animações Keyframe */
+@keyframes pulse-dot {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 10px var(--healthy); }
+    100% { transform: scale(0.9); opacity: 0.6; }
+}
+
+@keyframes blink {
+    from { opacity: 0.2; }
+    to { opacity: 1; }
+}
+
+@keyframes flash-red {
+    from { background: rgba(244, 63, 94, 0.1); }
+    to { background: rgba(244, 63, 94, 0.35); }
+}
+
+/* Responsividade Mobile */
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .video-card {
+        grid-column: 1 / -1;
+    }
+    .counters-grid {
+        grid-template-columns: 1fr;
+    }
+    .state-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}

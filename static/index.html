@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconhecimento de Grãos IA — Painel de Controle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar / Header -->
+        <header class="header">
+            <div class="logo-area">
+                <div class="logo-icon"></div>
+                <h1>Ceres<span>AI</span></h1>
+            </div>
+            <div class="system-status">
+                <span class="status-dot online"></span>
+                <span class="status-text">Raspberry Pi Conectado</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Side: Live Feed & Controls -->
+            <section class="card video-card">
+                <div class="card-header">
+                    <h2>Visualização em Tempo Real</h2>
+                    <div class="recording-badge" id="recording-badge">
+                        <span class="rec-dot"></span> GRAVANDO
+                    </div>
+                </div>
+                <div class="video-wrapper">
+                    <!-- Stream de vídeo gerado pelo FastAPI -->
+                    <img id="video-stream" src="/api/video_feed" alt="Stream de Vídeo da Câmera">
+                    
+                    <!-- Sobreposição da Válvula de Ar (Feedback Visual do Solenoide) -->
+                    <div class="valve-indicator-overlay" id="valve-overlay">
+                        <span>Jato de Ar Ativado</span>
+                    </div>
+                </div>
+                <div class="video-controls">
+                    <button id="btn-record" class="btn btn-primary">
+                        <span class="btn-icon">⏺</span> Iniciar Gravação
+                    </button>
+                    <button id="btn-mock-damaged" class="btn btn-secondary">
+                        <span class="btn-icon">⚡</span> Injetar Manual (Teste)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Side: Metrics and Counters -->
+            <section class="metrics-container">
+                
+                <!-- Counters Row -->
+                <div class="counters-grid">
+                    <div class="counter-card healthy">
+                        <h3>Grãos Saudáveis</h3>
+                        <div class="value" id="count-healthy">0</div>
+                        <div class="subtext">Status Adequado</div>
+                    </div>
+                    <div class="counter-card damaged">
+                        <h3>Grãos Estragados</h3>
+                        <div class="value" id="count-damaged">0</div>
+                        <div class="subtext">Ejetados por Jato de Ar</div>
+                    </div>
+                    <div class="counter-card total">
+                        <h3>Total Avaliados</h3>
+                        <div class="value" id="count-total">0</div>
+                        <div class="subtext">Eficiência: <span id="rate-efficiency">100%</span></div>
+                    </div>
+                </div>
+
+                <!-- Valve Control and State -->
+                <div class="card status-panel-card">
+                    <div class="card-header">
+                        <h2>Controle e Estado da Ejeção</h2>
+                    </div>
+                    <div class="state-row">
+                        <div class="state-col">
+                            <span class="label">Sinal Solenoide (GPIO 18)</span>
+                            <div class="valve-status-light" id="valve-status-light">Inativo</div>
+                        </div>
+                        <div class="state-col">
+                            <span class="label">Grupo Ativo</span>
+                            <select id="group-select" class="dropdown">
+                                <option value="Grupo Principal">Grupo Principal</option>
+                                <option value="Lote A - Importado">Lote A - Importado</option>
+                                <option value="Lote B - Teste Rápido">Lote B - Teste Rápido</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control-actions">
+                        <button id="btn-clear-db" class="btn btn-danger">
+                            Limpar Histórico de Métricas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chart Card -->
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2>Estatísticas por Grupo</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                </div>
+
+            </section>
+            
+            <!-- Bottom Section: Logs/History -->
+            <section class="card history-card full-width">
+                <div class="card-header">
+                    <h2>Últimas Detecções (Histórico Recente)</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Horário</th>
+                                <th>Grupo</th>
+                                <th>Classificação</th>
+                                <th>Confiança da IA</th>
+                                <th>Ação Efetuada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table-body">
+                            <!-- Inserido dinamicamente via JS -->
+                            <tr>
+                                <td colspan="5" class="empty-state">Buscando histórico...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+        
+        <footer class="footer">
+            <p>CeresAI &copy; 2026. Desenvolvido para reconhecimento em tempo real de grãos.</p>
+        </footer>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>
