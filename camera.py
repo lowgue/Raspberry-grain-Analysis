@@ -43,18 +43,52 @@ class CameraManager:
             return
         
         self.picam2 = None
-        # Tenta inicializar rpicam via Picamera2 (para Raspberry Pi 4 Bookworm)
-        try:
-            from picamera2 import Picamera2
-            self.picam2 = Picamera2()
-            config = self.picam2.create_video_configuration({"size": (640, 480)})
-            self.picam2.configure(config)
-            self.picam2.start()
-            self.cap = "picamera2"
-            logger.info("Câmera inicializada com sucesso via rpicam (Picamera2)")
-        except Exception as e:
-            logger.warning(f"Não foi possível iniciar rpicam (Picamera2): {e}. Tentando OpenCV padrão...")
-            # Tenta inicializar a câmera (indices 0, 1, 2...)
+        self.rpicam_process = None
+        
+        import shutil
+        import subprocess
+        
+        rpicam_cmd = None
+        if shutil.which("rpicam-vid"):
+            rpicam_cmd = "rpicam-vid"
+        elif shutil.which("libcamera-vid"):
+            rpicam_cmd = "libcamera-vid"
+            
+        # 1. Tenta inicializar via rpicam-vid / libcamera-vid (Mais garantido no Raspberry Pi OS moderno)
+        if rpicam_cmd:
+            try:
+                cmd = [
+                    rpicam_cmd, 
+                    "-t", "0", 
+                    "--codec", "yuv420", 
+                    "--width", "640", "--height", "480", 
+                    "--framerate", "30",
+                    "--inline", 
+                    "-o", "-"
+                ]
+                self.rpicam_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                self.cap = "rpicam-vid"
+                logger.info(f"Câmera inicializada com sucesso via {rpicam_cmd} (subprocess)")
+            except Exception as e:
+                logger.warning(f"Falha ao iniciar {rpicam_cmd}: {e}")
+                self.rpicam_process = None
+
+        # 2. Tenta inicializar rpicam via Picamera2 se o subprocess falhou
+        if not self.rpicam_process:
+            try:
+                from picamera2 import Picamera2
+                self.picam2 = Picamera2()
+                config = self.picam2.create_video_configuration({"size": (640, 480)})
+                self.picam2.configure(config)
+                self.picam2.start()
+                self.cap = "picamera2"
+                logger.info("Câmera inicializada com sucesso via rpicam (Picamera2)")
+            except Exception as e:
+                logger.warning(f"Não foi possível iniciar rpicam (Picamera2): {e}. Tentando OpenCV padrão...")
+                self.picam2 = None
+        
+        # 3. Tenta inicializar via OpenCV padrão
+        if not self.rpicam_process and not self.picam2:
             for idx in [self.camera_index, 1, 2, 0]:
                 self.cap = cv2.VideoCapture(idx)
                 if self.cap.isOpened():
@@ -75,9 +109,31 @@ class CameraManager:
         import glob
         import random
         while self.running:
-            if self.picam2 is not None:
+            if self.rpicam_process is not None:
+                try:
+                    width, height = 640, 480
+                    yuv_len = int(width * height * 1.5)
+                    raw = self.rpicam_process.stdout.read(yuv_len)
+                    if raw and len(raw) == yuv_len:
+                        yuv = np.frombuffer(raw, dtype=np.uint8).reshape((int(height * 1.5), width))
+                        frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_I420)
+                        with self._lock:
+                            self.frame = frame
+                            if self.is_recording and self.video_writer:
+                                try:
+                                    self.video_writer.write(frame)
+                                except Exception as e:
+                                    logger.error(f"Erro ao gravar frame: {e}")
+                    else:
+                        time.sleep(0.01)
+                except Exception as e:
+                    logger.warning(f"Falha ao ler processo rpicam-vid: {e}")
+                    time.sleep(0.1)
+            elif self.picam2 is not None:
                 try:
                     frame = self.picam2.capture_array()
+                    # Converte de RGB (Picamera2) para BGR (OpenCV)
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     with self._lock:
                         self.frame = frame
                         if self.is_recording and self.video_writer:
@@ -86,7 +142,7 @@ class CameraManager:
                             except Exception as e:
                                 logger.error(f"Erro ao gravar frame: {e}")
                 except Exception as e:
-                    logger.warning(f"Falha ao capturar frame do rpicam: {e}")
+                    logger.warning(f"Falha ao capturar frame do rpicam (Picamera2): {e}")
                     time.sleep(0.1)
             elif self.cap and isinstance(self.cap, cv2.VideoCapture) and self.cap.isOpened():
                 ret, frame = self.cap.read()
@@ -187,7 +243,16 @@ class CameraManager:
         """Para o loop de leitura e libera a câmera."""
         self.running = False
         self.stop_recording()
-        if self.cap:
+        if hasattr(self, 'rpicam_process') and self.rpicam_process:
+            self.rpicam_process.terminate()
+            self.rpicam_process = None
+        if hasattr(self, 'picam2') and self.picam2:
+            try:
+                self.picam2.stop()
+            except:
+                pass
+            self.picam2 = None
+        if self.cap and isinstance(self.cap, cv2.VideoCapture):
             self.cap.release()
             self.cap = None
         logger.info("Câmera desligada.")
