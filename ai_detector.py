@@ -119,41 +119,6 @@ class GrainDetector:
         # 4. Encontra contornos (potenciais grãos)
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # Se nenhum contorno for encontrado, e para garantir que a UI tenha movimento na ausência
-        # de uma câmera apontando para grãos reais, simulamos alguns grãos aleatórios caindo
-        # caso a câmera esteja capturando um fundo estático e sem grãos.
-        # Apenas executa a simulação se o backend de captura for explicitamente simulado.
-        if is_simulated and len(contours) < 2 and random.random() < 0.08:
-            # Simulação de grão caindo
-            h_f, w_f = frame.shape[:2]
-            sim_x = random.randint(50, w_f - 150)
-            sim_y = random.randint(50, h_f - 150)
-            sim_w = random.randint(40, 70)
-            sim_h = random.randint(40, 70)
-            
-            # 20% de chance de ser um grão danificado/estragado
-            is_damaged = random.random() < 0.25
-            status = "damaged" if is_damaged else "healthy"
-            confidence = random.uniform(0.85, 0.99)
-            
-            # Adiciona detecção simulada
-            detections.append({
-                "status": status,
-                "confidence": confidence,
-                "box": (sim_x, sim_y, sim_w, sim_h)
-            })
-            
-            # Desenha no frame
-            color = (0, 0, 255) if status == "damaged" else (0, 255, 0)
-            cv2.ellipse(annotated_frame, (sim_x + sim_w//2, sim_y + sim_h//2), (sim_w//2, sim_h//2), 0, 0, 360, color, -1)
-            cv2.rectangle(annotated_frame, (sim_x, sim_y), (sim_x + sim_w, sim_y + sim_h), color, 2)
-            cv2.putText(
-                annotated_frame, 
-                f"{status.upper()} {confidence:.2f}", 
-                (sim_x, sim_y - 8), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2
-            )
-            return annotated_frame, detections
 
         # Processa contornos reais detectados
         for cnt in contours:

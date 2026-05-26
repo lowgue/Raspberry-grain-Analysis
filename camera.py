@@ -42,17 +42,29 @@ class CameraManager:
         if self.running:
             return
         
-        # Tenta inicializar a câmera (indices 0, 1, 2...)
-        for idx in [self.camera_index, 1, 2, 0]:
-            self.cap = cv2.VideoCapture(idx)
-            if self.cap.isOpened():
-                logger.info(f"Câmera inicializada com sucesso no índice {idx}")
-                self.camera_index = idx
-                break
-        
-        if not self.cap or not self.cap.isOpened():
-            logger.warning("Nenhuma câmera física encontrada. Iniciando em modo SIMULADO.")
-            self.cap = None
+        self.picam2 = None
+        # Tenta inicializar rpicam via Picamera2 (para Raspberry Pi 4 Bookworm)
+        try:
+            from picamera2 import Picamera2
+            self.picam2 = Picamera2()
+            config = self.picam2.create_video_configuration({"size": (640, 480)})
+            self.picam2.configure(config)
+            self.picam2.start()
+            self.cap = "picamera2"
+            logger.info("Câmera inicializada com sucesso via rpicam (Picamera2)")
+        except Exception as e:
+            logger.warning(f"Não foi possível iniciar rpicam (Picamera2): {e}. Tentando OpenCV padrão...")
+            # Tenta inicializar a câmera (indices 0, 1, 2...)
+            for idx in [self.camera_index, 1, 2, 0]:
+                self.cap = cv2.VideoCapture(idx)
+                if self.cap.isOpened():
+                    logger.info(f"Câmera inicializada com sucesso no índice {idx}")
+                    self.camera_index = idx
+                    break
+            
+            if not self.cap or (isinstance(self.cap, cv2.VideoCapture) and not self.cap.isOpened()):
+                logger.warning("Nenhuma câmera física encontrada. Iniciando em modo SIMULADO.")
+                self.cap = None
         
         self.running = True
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
@@ -60,15 +72,27 @@ class CameraManager:
 
     def _capture_loop(self):
         """Loop de captura contínuo para manter latência zero."""
-        simulated_frame_count = 0
+        import glob
+        import random
         while self.running:
-            if self.cap and self.cap.isOpened():
+            if self.picam2 is not None:
+                try:
+                    frame = self.picam2.capture_array()
+                    with self._lock:
+                        self.frame = frame
+                        if self.is_recording and self.video_writer:
+                            try:
+                                self.video_writer.write(frame)
+                            except Exception as e:
+                                logger.error(f"Erro ao gravar frame: {e}")
+                except Exception as e:
+                    logger.warning(f"Falha ao capturar frame do rpicam: {e}")
+                    time.sleep(0.1)
+            elif self.cap and isinstance(self.cap, cv2.VideoCapture) and self.cap.isOpened():
                 ret, frame = self.cap.read()
                 if ret:
                     with self._lock:
                         self.frame = frame
-                        
-                        # Se estiver gravando, grava o frame atual
                         if self.is_recording and self.video_writer:
                             try:
                                 self.video_writer.write(frame)
@@ -78,35 +102,34 @@ class CameraManager:
                     logger.warning("Falha ao capturar frame físico da câmera.")
                     time.sleep(0.1)
             else:
-                # Simula uma imagem de teste caso não haja câmera disponível
-                # Cria uma imagem colorida que se move ligeiramente para demonstrar atividade
-                frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                # Adiciona grid ou animação de fundo
-                simulated_frame_count += 1
-                bg_color = int((10 + abs(10 * math.sin(simulated_frame_count * 0.05))))
-                frame[:] = [bg_color, bg_color, bg_color]
+                # Modo simulado: lê imagens do dataset
+                dataset_dir = os.path.join(os.path.dirname(__file__), "dataset")
+                images = glob.glob(os.path.join(dataset_dir, "healthy", "*.*")) + \
+                         glob.glob(os.path.join(dataset_dir, "damaged", "*.*"))
                 
-                # Desenha esteiras transportadoras simuladas
-                cv2.rectangle(frame, (100, 0), (540, 480), (40, 40, 40), -1) # Esteira principal
-                cv2.line(frame, (320, 0), (320, 480), (80, 80, 80), 2) # Divisória
+                # Filtra apenas extensões de imagem comuns
+                images = [img for img in images if img.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 
-                # Exibe um texto "Sem Sinal de Câmera - Demo Ativa"
-                cv2.putText(
-                    frame, 
-                    "CAMERA DEMO (SEM DISPOSITIVO)", 
-                    (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2
-                )
+                if not images:
+                    # Se não tiver nenhuma, não faz nada
+                    time.sleep(1)
+                    continue
                 
-                with self._lock:
-                    self.frame = frame
-                    if self.is_recording and self.video_writer:
-                        try:
-                            self.video_writer.write(frame)
-                        except Exception as e:
-                            logger.error(f"Erro ao gravar frame simulado: {e}")
+                img_path = random.choice(images)
+                frame = cv2.imread(img_path)
                 
-                time.sleep(1/30.0) # 30 FPS simulados
+                if frame is not None:
+                    # Redimensiona para garantir compatibilidade com o modelo
+                    frame = cv2.resize(frame, (640, 480))
+                    with self._lock:
+                        self.frame = frame
+                        if self.is_recording and self.video_writer:
+                            try:
+                                self.video_writer.write(frame)
+                            except Exception as e:
+                                logger.error(f"Erro ao gravar frame simulado: {e}")
+                
+                time.sleep(1.0) # Atualiza a imagem a cada 1 segundo no modo dataset
 
     def get_frame(self):
         """Retorna uma cópia do frame mais recente."""
