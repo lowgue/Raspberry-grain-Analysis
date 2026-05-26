@@ -82,9 +82,6 @@ def gen_frames():
                     
                     # 2. Registra o evento de ejeção no banco de dados
                     db_manager.log_grain(status, current_group, confidence)
-                    
-                    # 3. Salva o recorte do grão estragado no dataset
-                    detector.save_grain_crop(frame, det["box"], status)
             
             elif status == "healthy":
                 # Registro com cooldown para evitar inflar contagem do mesmo grão
@@ -92,9 +89,6 @@ def gen_frames():
                     last_healthy_log_time = now
                     logger.info("Grão saudável registrado.")
                     db_manager.log_grain(status, current_group, confidence)
-                    
-                    # Salva o recorte do grão saudável no dataset
-                    detector.save_grain_crop(frame, det["box"], status)
         
         # Converte o frame anotado para formato JPEG
         import cv2
