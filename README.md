@@ -30,6 +30,57 @@ python main.py
 ```
 O painel estará disponível em `http://localhost:8000`.
 
+## YOLOv9t + Coffee Bean Dataset
+
+O sistema suporta detecção com **YOLOv9t** treinado no dataset **CoffeeBeansGradingV3** (Roboflow: classes `defect` e `premium`, mapeadas para `damaged` e `healthy`).
+
+### 1. Instalar dependências de ML (PC com GPU recomendado)
+
+```bash
+pip install -r requirements-ml.txt
+```
+
+### 2. Baixar o dataset
+
+**Opção A — Hugging Face (sem API key, padrão):**
+
+```bash
+python ml/download_dataset.py --source huggingface
+```
+
+Usa [SamruddhK/coffee-bean-grading-dataset](https://huggingface.co/datasets/SamruddhK/coffee-bean-grading-dataset) (~2284 imagens anotadas), convertido para YOLO com classes `defect` e `premium`.
+
+**Opção B — Roboflow (CoffeeBeansGradingV3):**
+
+```bash
+export ROBOFLOW_API_KEY=sua_chave_aqui
+python ml/download_dataset.py --source roboflow
+```
+
+### 3. Treinar YOLOv9t
+
+```bash
+python ml/train_yolov9t.py --epochs 100 --export-onnx
+```
+
+O modelo final fica em `models/coffee_beans_yolov9t/weights/best.pt`.
+
+### 4. Usar no servidor de detecção
+
+```bash
+export YOLO_MODEL_PATH=models/coffee_beans_yolov9t/weights/best.pt
+python main.py
+```
+
+No Raspberry Pi, exporte ONNX para inferência mais leve:
+
+```bash
+python ml/export_model.py
+export YOLO_ONNX_PATH=models/coffee_beans_yolov9t/weights/best.onnx
+```
+
+Sem modelo treinado, o sistema continua usando o detector clássico (contornos/cor).
+
 ## Configuração do Hardware (Raspberry Pi)
 - **Pino GPIO da Válvula Solenoide (Jato de Ar)**: Padrão no pino físico GPIO 18 (Bcm).
 - **Esquema de Ligação**: GPIO 18 -> Resistor (220Ω) -> Gate do MOSFET de Potência (ex: IRLZ44N) -> Solenoide (com diodo de flyback).

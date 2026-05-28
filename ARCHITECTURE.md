@@ -19,7 +19,7 @@ graph TD
 
 ### 2.1 Backend (Python)
 - **FastAPI / Uvicorn**: Servidor web rápido para expor a API de controle, streaming de vídeo em tempo real e entrega do painel estático.
-- **Detector de IA (OpenCV DNN / Mock)**: Utiliza a API `cv2.dnn` para carregar um modelo de detecção leve (como YOLOv8/v11 Nano). Se nenhum modelo for fornecido, roda um classificador simulado com base em processamento de imagem básico para facilidade de testes.
+- **Detector de IA (YOLOv9t / ONNX / CV)**: Prioridade: (1) Ultralytics YOLOv9t treinado no Coffee Bean Dataset (`models/coffee_beans_yolov9t/weights/best.pt`); (2) ONNX exportado para Raspberry Pi; (3) fallback por contornos e cor. Pipeline de treino em `ml/` (download Roboflow, `train_yolov9t.py`, `export_model.py`).
 - **Processamento de Câmera (OpenCV)**: Loop assíncrono em thread separada para captura contínua de frames. Suporta câmeras USB genéricas (`/dev/video*`) e câmera nativa do Raspberry Pi via backend OpenCV compatível.
 - **Controle GPIO (Pino de Válvula / Soprador)**: Interface de acionamento do solenoide para o jato de ar. Utiliza um padrão de fallback (Mock GPIO no PC local, e `gpiozero`/`RPi.GPIO` no Raspberry Pi).
 - **Banco de Dados (SQLite)**: Banco embarcado leve para armazenar o histórico de contagem de grãos processados, divididos por grupos (Saudáveis, Estragados, Outros).

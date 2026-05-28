@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# YOLOv9t / Coffee Bean Dataset
+data/coffee_beans/
+data/hf_coffee_bean_raw/
+models/
+runs/
+*.pt
+*.onnx
+wandb/

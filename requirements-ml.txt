@@ -1,0 +1,8 @@
+# Dependências para treino YOLOv9t + Coffee Bean Dataset (máquina de desenvolvimento)
+# Não necessário no Raspberry Pi se usar apenas ONNX exportado.
+-r requirements.txt
+ultralytics>=8.3.0
+roboflow>=1.1.0
+torch>=2.0.0
+torchvision>=0.15.0
+huggingface_hub>=0.20.0

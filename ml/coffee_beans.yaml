@@ -1,0 +1,13 @@
+# Configuração YOLO — Coffee Bean Dataset (CoffeeBeansGradingV3 / Roboflow)
+# Após download: python ml/download_dataset.py
+# O Roboflow gera data.yaml; este arquivo é usado após ajuste de paths no train.
+
+path: ../data/coffee_beans
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 2
+names:
+  0: defect
+  1: premium
