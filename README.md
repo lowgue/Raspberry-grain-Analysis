@@ -4,51 +4,64 @@ Detecção e contagem de grãos de café em tempo real (YOLOv9t), dashboard web,
 
 ---
 
-## Início rápido — rodar agora (modelo já treinado)
+## Início rápido — passo a passo
 
-Se o projeto já tem `models/coffee_beans_yolov9t/weights/best.pt`:
+### 1. Entrar na pasta do projeto
 
 ```bash
 cd Raspberry-grain-Analysis
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-ml.txt
-export YOLO_MODEL_PATH=models/coffee_beans_yolov9t/weights/best.pt
-python main.py
 ```
 
-Abra **http://localhost:8000**
-
-> Use sempre `source .venv/bin/activate` antes de `python main.py`. O `python3` do sistema não tem as dependências instaladas.
-
----
-
-## Setup completo — do zero ao painel (copiar e colar)
-
-Primeira vez no projeto (instala tudo, baixa dataset, treina e sobe o servidor):
+### 2. Criar o ambiente virtual
 
 ```bash
-cd Raspberry-grain-Analysis
-
 python3 -m venv .venv
 source .venv/bin/activate
+```
 
+O terminal deve mostrar `(.venv)` no início da linha. Para sair depois: `deactivate`.
+
+### 3. Instalar dependências
+
+```bash
 pip install -r requirements-ml.txt
+```
 
+### 4. Criar a pasta `data/` e baixar o dataset
+
+O script cria `data/coffee_beans/` com imagens, anotações e o arquivo `data.yaml`:
+
+```bash
 python ml/download_dataset.py --source huggingface
+```
 
+Isso pode demorar alguns minutos (download de ~2284 imagens).
+
+Se preferir criar as pastas vazias à mão antes:
+
+```bash
+mkdir -p data/coffee_beans/train/images
+mkdir -p data/coffee_beans/train/labels
+mkdir -p data/coffee_beans/valid/images
+mkdir -p data/coffee_beans/valid/labels
+```
+
+Depois coloque suas fotos e labels YOLO nessas pastas e rode o download **ou** monte o `data.yaml` (veja seção [Dataset próprio](#dataset-próprio)).
+
+### 5. Treinar o YOLOv9t
+
+Sem placa de vídeo (CPU — mais lento):
+
+```bash
 python ml/train_yolov9t.py \
   --data data/coffee_beans/data.yaml \
   --epochs 50 \
   --imgsz 416 \
   --batch 4 \
   --device cpu
-
-export YOLO_MODEL_PATH=models/coffee_beans_yolov9t/weights/best.pt
-python main.py
 ```
 
-Com **GPU NVIDIA** (treino muito mais rápido):
+Com GPU NVIDIA (mais rápido):
 
 ```bash
 python ml/train_yolov9t.py \
@@ -56,9 +69,21 @@ python ml/train_yolov9t.py \
   --epochs 100 \
   --imgsz 640 \
   --batch 16 \
-  --device 0 \
-  --export-onnx
+  --device 0
 ```
+
+Ao terminar, o modelo fica em `models/coffee_beans_yolov9t/weights/best.pt`.
+
+### 6. Rodar o sistema
+
+```bash
+export YOLO_MODEL_PATH=models/coffee_beans_yolov9t/weights/best.pt
+python main.py
+```
+
+Abra **http://localhost:8000** no navegador.
+
+> Sempre use `source .venv/bin/activate` antes dos comandos `python`. O `python3` do sistema não tem as bibliotecas instaladas.
 
 ---
 
@@ -111,16 +136,41 @@ export YOLO_DEVICE=cpu        # cpu ou 0 (GPU)
 
 ## Dataset próprio
 
-Estrutura YOLO:
+Use outro nome de pasta, por exemplo `data/meu_cafe/`:
+
+```bash
+mkdir -p data/meu_cafe/train/images data/meu_cafe/train/labels
+mkdir -p data/meu_cafe/valid/images data/meu_cafe/valid/labels
+```
+
+Estrutura:
 
 ```
 data/meu_cafe/
 ├── data.yaml
-├── train/images/  train/labels/
-└── valid/images/  valid/labels/
+├── train/images/   train/labels/
+└── valid/images/   valid/labels/
 ```
 
-Treinar:
+Cada imagem `foto.jpg` precisa de um `foto.txt` na pasta `labels/` (coordenadas normalizadas 0–1):
+
+```
+0 0.5 0.5 0.12 0.18
+```
+
+Crie `data/meu_cafe/data.yaml`:
+
+```yaml
+path: /caminho/absoluto/Raspberry-grain-Analysis/data/meu_cafe
+train: train/images
+val: valid/images
+nc: 2
+names:
+  0: defect
+  1: premium
+```
+
+Treinar e rodar:
 
 ```bash
 source .venv/bin/activate
@@ -129,14 +179,16 @@ export YOLO_MODEL_PATH=models/coffee_beans_yolov9t/weights/best.pt
 python main.py
 ```
 
-Classes customizadas: edite `ml/class_mapping.py` (`defect` → estragado, `premium` → saudável).
+Classes no painel: edite `ml/class_mapping.py`.
 
-Download alternativo (Roboflow):
+Download via Roboflow em vez do Hugging Face:
 
 ```bash
 export ROBOFLOW_API_KEY=sua_chave
 python ml/download_dataset.py --source roboflow
 ```
+
+**Nota:** `data/` é para treino YOLO. A pasta `dataset/healthy` e `dataset/damaged` é onde o sistema salva recortes durante o uso da câmera.
 
 ---
 
