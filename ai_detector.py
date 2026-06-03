@@ -138,18 +138,16 @@ class GrainDetector:
         return annotated_frame, detections
 
     def _detect_dnn(self, frame):
-        """Detecção via OpenCV DNN (ONNX exportado do YOLOv9t)."""
+        """Detecção via OpenCV DNN (ONNX exportado do YOLOv9t) com vetorização e NMS."""
         from ml.class_mapping import to_grain_status
 
         h, w = frame.shape[:2]
-        blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (640, 640), swapRB=True, crop=False)
+        net_w, net_h = 640, 640
+        blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (net_w, net_h), swapRB=True, crop=False)
         self.net.setInput(blob)
         outputs = self.net.forward()
 
-        detections = []
-        annotated_frame = frame.copy()
-
-        # Saída Ultralytics ONNX: [1, 4+nc, num_anchors] — NMS manual simplificado
+        # Saída: [1, 4+nc, num_anchors]
         if isinstance(outputs, (list, tuple)):
             out = outputs[0]
         else:
@@ -160,46 +158,77 @@ class GrainDetector:
         if out.shape[0] < out.shape[1]:
             out = out.T
 
-        for row in out:
-            if row.shape[0] < 5:
-                continue
-            scores = row[4:]
-            if scores.size == 0:
-                continue
-            class_id = int(np.argmax(scores))
-            confidence = float(scores[class_id])
-            if confidence < self.conf_threshold:
-                continue
+        # Vetorização para alta performance (evita loop lento do Python sobre 8400 linhas)
+        scores = out[:, 4:]
+        class_ids = np.argmax(scores, axis=1)
+        confidences = np.take_along_axis(scores, np.expand_dims(class_ids, axis=1), axis=1).squeeze(axis=1)
+        
+        mask = confidences >= self.conf_threshold
+        if not np.any(mask):
+            return frame, []
 
-            cx, cy, bw, bh = row[0], row[1], row[2], row[3]
-            x1 = int((cx - bw / 2) * w)
-            y1 = int((cy - bh / 2) * h)
-            x2 = int((cx + bw / 2) * w)
-            y2 = int((cy + bh / 2) * h)
-            bw_px, bh_px = x2 - x1, y2 - y1
+        boxes_raw = out[mask, :4]
+        class_ids = class_ids[mask]
+        confidences = confidences[mask]
 
-            class_name = str(class_id)
-            status = to_grain_status(class_name)
+        # Fatores de escala para ajustar coordenadas da rede (640x640) para a imagem real
+        x_scale = w / net_w
+        y_scale = h / net_h
 
-            detections.append(
-                {
-                    "status": status,
-                    "confidence": confidence,
-                    "box": (x1, y1, bw_px, bh_px),
-                    "class_name": class_name,
-                }
-            )
-            color = (0, 255, 0) if status == "healthy" else (0, 0, 255)
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(
-                annotated_frame,
-                f"{status} {confidence:.2f}",
-                (x1, y1 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                2,
-            )
+        boxes = []
+        conf_list = []
+        class_id_list = []
+        
+        for i in range(len(boxes_raw)):
+            cx, cy, bw, bh = boxes_raw[i]
+            x1 = int((cx - bw / 2) * x_scale)
+            y1 = int((cy - bh / 2) * y_scale)
+            bw_px = int(bw * x_scale)
+            bh_px = int(bh * y_scale)
+            
+            boxes.append([x1, y1, bw_px, bh_px])
+            conf_list.append(float(confidences[i]))
+            class_id_list.append(int(class_ids[i]))
+
+        # Filtro NMS (Non-Maximum Suppression) nativo em C++
+        indices = cv2.dnn.NMSBoxes(boxes, conf_list, self.conf_threshold, 0.45)
+        
+        detections = []
+        annotated_frame = frame.copy()
+        
+        if len(indices) > 0:
+            if isinstance(indices, np.ndarray):
+                indices = indices.flatten()
+            
+            for idx in indices:
+                x, y, bw_px, bh_px = boxes[idx]
+                conf = conf_list[idx]
+                class_id = class_id_list[idx]
+                
+                # Mapeia ID numérico da classe para seu respectivo nome textual
+                class_name = self.yolo_names.get(class_id, "defect" if class_id == 0 else "premium")
+                status = to_grain_status(class_name)
+                
+                detections.append(
+                    {
+                        "status": status,
+                        "confidence": conf,
+                        "box": (x, y, bw_px, bh_px),
+                        "class_name": class_name,
+                    }
+                )
+                
+                color = (0, 255, 0) if status == "healthy" else (0, 0, 255)
+                cv2.rectangle(annotated_frame, (x, y), (x + bw_px, y + bh_px), color, 2)
+                cv2.putText(
+                    annotated_frame,
+                    f"{status} {conf:.2f}",
+                    (x, max(y - 5, 12)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    2,
+                )
 
         return annotated_frame, detections
 
