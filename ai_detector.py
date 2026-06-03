@@ -25,15 +25,20 @@ class GrainDetector:
         self.conf_threshold = float(os.environ.get("YOLO_CONF", "0.5"))
         self.classes = ["healthy", "damaged"]
 
-        self._load_yolo_ultralytics()
-        if self.yolo is None:
+        # Em CPU (como no Raspberry Pi), priorizamos o modelo ONNX por ser muito mais rápido e leve
+        if os.path.isfile(self.onnx_path):
             self._load_onnx()
+        
+        if self.net is None:
+            self._load_yolo_ultralytics()
+
         if self.yolo is None and self.net is None:
             logger.info(
-                "Nenhum modelo YOLOv9t encontrado (%s). "
+                "Nenhum modelo YOLOv9t encontrado (%s ou %s). "
                 "Usando detector por Visão Computacional (contornos/cor). "
                 "Treine com: python ml/download_dataset.py && python ml/train_yolov9t.py",
                 self.model_path,
+                self.onnx_path,
             )
 
     def _load_yolo_ultralytics(self):
@@ -58,6 +63,8 @@ class GrainDetector:
             return
         try:
             self.net = cv2.dnn.readNetFromONNX(self.onnx_path)
+            self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+            self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
             logger.info("Modelo ONNX carregado: %s", self.onnx_path)
         except Exception as e:
             logger.error("Erro ao carregar ONNX: %s", e)

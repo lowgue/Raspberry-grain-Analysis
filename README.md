@@ -264,8 +264,9 @@ O arquivo otimizado será gerado em:
 Você pode configurar dinamicamente o comportamento de detecção alterando variáveis de ambiente antes de executar o script `main.py`:
 *   `YOLO_MODEL_PATH`: Caminho absoluto ou relativo para os pesos do PyTorch (`best.pt`).
 *   `YOLO_ONNX_PATH`: Caminho absoluto ou relativo para o modelo otimizado (`best.onnx`).
-*   `YOLO_CONF`: Limite de confiança mínimo para aceitar uma detecção (padrão: `0.5` - isto é, 50% de certeza).
+*   `YOLO_CONF`: Limite de confiança mínimo para aceitar uma detecção (padrão: `0.5`).
 *   `YOLO_DEVICE`: Dispositivo utilizado para inferência de PyTorch (`cpu`, `cuda` ou `0`).
+*   `YOLO_SKIP_FRAMES`: Número de frames para pular inferência e exibir o feed direto (padrão: `0`). Útil para hardware limitado como o Raspberry Pi (valores recomendados: `1` ou `2`).
 
 ---
 
@@ -278,14 +279,16 @@ python main.py
 ```
 
 ### Executar com YOLO (ONNX Otimizado)
-**Configuração recomendada para rodar no Raspberry Pi**. O backend usará a biblioteca OpenCV DNN para inferência ágil:
+**Configuração recomendada e priorizada automaticamente pelo sistema**. Se o arquivo `.onnx` estiver presente na pasta `models/coffee_beans_yolov9t/weights/`, ele será carregado primeiro por padrão:
 ```bash
 export YOLO_ONNX_PATH=models/coffee_beans_yolov9t/weights/best.onnx
+# Opcional: pular 2 a cada 3 frames de IA para manter o stream a 30 FPS sem lag na CPU
+export YOLO_SKIP_FRAMES=2
 python main.py
 ```
 
 ### Executar em Modo Fallback (Sem YOLO / Visão Clássica)
-Se você não treinou nenhum modelo ou está apenas testando a infraestrutura de câmera e GPIO, inicie sem setar variáveis. O sistema iniciará utilizando segmentação clássica por contornos e cor para discernir grãos escuros/danificados de claros/saudáveis:
+Se você remover os modelos `.pt` e `.onnx` ou quiser testar sem IA, o sistema iniciará utilizando segmentação clássica por contornos e cor para discernir grãos escuros/danificados de claros/saudáveis:
 ```bash
 python main.py
 ```

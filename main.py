@@ -39,6 +39,9 @@ last_healthy_log_time = 0.0
 COOLDOWN_DAMAGED_SEC = 0.6
 COOLDOWN_HEALTHY_SEC = 0.6
 
+# Frequência de Inferência (pular frames para otimizar desempenho em hardware limitado)
+SKIP_FRAMES = int(os.environ.get("YOLO_SKIP_FRAMES", "0"))
+
 class GroupSelection(BaseModel):
     group_name: str
 
@@ -57,38 +60,49 @@ def gen_frames():
     """Gerador do stream de vídeo MJPEG com detecção de IA acoplada."""
     global last_ejection_time, last_healthy_log_time
     
+    frame_count = 0
     while True:
         frame = camera_manager.get_frame()
         if frame is None:
             time.sleep(0.03)
             continue
         
-        # Executa a inteligência artificial para detecção e classificação
-        annotated_frame, detections = detector.detect_grains(frame, is_simulated=camera_manager.is_simulated)
+        # Decide se faz detecção neste frame ou se pula para manter o feed de vídeo fluido
+        should_detect = True
+        if SKIP_FRAMES > 0:
+            frame_count += 1
+            if frame_count % (SKIP_FRAMES + 1) != 0:
+                should_detect = False
         
-        now = time.time()
-        for det in detections:
-            status = det["status"]
-            confidence = det["confidence"]
+        if should_detect:
+            # Executa a inteligência artificial para detecção e classificação
+            annotated_frame, detections = detector.detect_grains(frame, is_simulated=camera_manager.is_simulated)
             
-            if status == "damaged":
-                # Verifica se saiu do tempo de cooldown para disparar e registrar
-                if now - last_ejection_time > COOLDOWN_DAMAGED_SEC:
-                    last_ejection_time = now
-                    logger.info("Grão estragado detectado! Acionando jato de ar...")
-                    
-                    # 1. Envia o sinal elétrico para o solenoide
-                    gpio_controller.trigger_air_jet()
-                    
-                    # 2. Registra o evento de ejeção no banco de dados
-                    db_manager.log_grain(status, current_group, confidence)
-            
-            elif status == "healthy":
-                # Registro com cooldown para evitar inflar contagem do mesmo grão
-                if now - last_healthy_log_time > COOLDOWN_HEALTHY_SEC:
-                    last_healthy_log_time = now
-                    logger.info("Grão saudável registrado.")
-                    db_manager.log_grain(status, current_group, confidence)
+            now = time.time()
+            for det in detections:
+                status = det["status"]
+                confidence = det["confidence"]
+                
+                if status == "damaged":
+                    # Verifica se saiu do tempo de cooldown para disparar e registrar
+                    if now - last_ejection_time > COOLDOWN_DAMAGED_SEC:
+                        last_ejection_time = now
+                        logger.info("Grão estragado detectado! Acionando jato de ar...")
+                        
+                        # 1. Envia o sinal elétrico para o solenoide
+                        gpio_controller.trigger_air_jet()
+                        
+                        # 2. Registra o evento de ejeção no banco de dados
+                        db_manager.log_grain(status, current_group, confidence)
+                
+                elif status == "healthy":
+                    # Registro com cooldown para evitar inflar contagem do mesmo grão
+                    if now - last_healthy_log_time > COOLDOWN_HEALTHY_SEC:
+                        last_healthy_log_time = now
+                        logger.info("Grão saudável registrado.")
+                        db_manager.log_grain(status, current_group, confidence)
+        else:
+            annotated_frame = frame
         
         # Converte o frame anotado para formato JPEG
         import cv2
