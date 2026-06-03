@@ -117,8 +117,21 @@ def _load_dotenv():
             os.environ[key] = value
 
 
+def _check_python_hint():
+    venv_python = Path(PROJECT_ROOT) / ".venv" / "bin" / "python"
+    if venv_python.is_file() and Path(sys.executable).resolve() != venv_python.resolve():
+        print(
+            "Aviso: você não está usando o Python do .venv.\n"
+            f"  Atual:  {sys.executable}\n"
+            f"  Use:    source .venv/bin/activate\n"
+            "  ou:     .venv/bin/python ml/download_dataset.py --source huggingface\n",
+            file=sys.stderr,
+        )
+
+
 def main():
     _load_dotenv()
+    _check_python_hint()
     p = argparse.ArgumentParser(description="Download Coffee Bean Dataset")
     p.add_argument(
         "--source",

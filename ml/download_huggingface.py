@@ -68,14 +68,31 @@ def _convert_labelme_json(json_path: Path, class_name: str) -> list[str]:
     return lines
 
 
-def download_hf_raw() -> Path:
+def _ensure_hf_deps():
     try:
-        from huggingface_hub import snapshot_download
+        import huggingface_hub  # noqa: F401
+        return
     except ImportError:
-        print("pip install huggingface_hub", file=sys.stderr)
+        print(
+            "Erro: pacote 'huggingface_hub' não encontrado neste Python.\n\n"
+            "Use o ambiente virtual do projeto:\n"
+            "  cd Raspberry-grain-Analysis\n"
+            "  source .venv/bin/activate\n"
+            "  pip install -r requirements-ml.txt\n"
+            "  python ml/download_dataset.py --source huggingface\n\n"
+            "Ou em uma linha:\n"
+            "  .venv/bin/pip install huggingface_hub\n"
+            "  .venv/bin/python ml/download_dataset.py --source huggingface",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    print(f"Baixando {HF_REPO} ...")
+
+def download_hf_raw() -> Path:
+    _ensure_hf_deps()
+    from huggingface_hub import snapshot_download
+
+    print(f"Baixando {HF_REPO} ... (pode levar vários minutos)", flush=True)
     path = snapshot_download(
         repo_id=HF_REPO,
         repo_type="dataset",
